@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swim Meet Ribbon Sticker Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  /* ===================== Screen styling (hidden when printing) ===================== */
+  :root {
+    --ink:#1c2a3a; --muted:#5b6a7d; --line:#d7dee7; --line-soft:#e6ecf2;
+    --accent:#0a6ebd; --accent-dk:#075a9b; --accent-bg:#eef5fb;
+    --good:#2a8a5a; --good-bg:#eaf7ef;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: #eef2f6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app { max-width: 1200px; margin: 0 auto; padding: 22px 20px 64px; }
+  header.app-head { margin-bottom: 18px; }
+  h1 { font-size: 23px; margin: 0 0 4px; letter-spacing:-0.01em; }
+  .sub { color: var(--muted); font-size: 14.5px; margin: 0; }
+
+  /* Two-column workspace: editable on the left, live preview on the right */
+  .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 22px; align-items: start; }
+  @media (max-width: 900px) {
+    .workspace { grid-template-columns: 1fr; }
+    .preview-pane { position: static !important; max-height: none !important; }
+  }
+
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:18px; }
+  .card h2 { font-size:13px; margin:0 0 14px; text-transform:uppercase; letter-spacing:.05em; color:#48586b; }
+
+  /* ---- Collapsible "How to use" ---- */
+  details.howto { background:#fff; border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:12px; margin-bottom:18px; overflow:hidden; }
+  details.howto > summary {
+    cursor:pointer; list-style:none; padding:15px 18px; font-size:15px; font-weight:700; color:var(--accent-dk);
+    display:flex; align-items:center; gap:10px; user-select:none;
+  }
+  details.howto > summary::-webkit-details-marker { display:none; }
+  details.howto > summary .chev { transition: transform .2s; font-size:13px; color:var(--accent); }
+  details.howto[open] > summary .chev { transform: rotate(90deg); }
+  details.howto > summary:hover { background:var(--accent-bg); }
+  .howto-body { padding: 2px 20px 16px; }
+  .howto-body .lead { font-size:14px; color:var(--muted); margin:0 0 12px; }
+  .howto-body ul { margin:0; padding-left:20px; font-size:14px; color:#33414f; line-height:1.65; }
+  .howto-body ul li { margin-bottom:8px; }
+  .pill { display:inline-block; background:var(--accent-bg); color:var(--accent-dk); border-radius:5px; padding:1px 7px; font-weight:600; font-size:12.5px; white-space:nowrap; }
+
+  /* ---- Form fields ---- */
+  .row { display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; }
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field > label { font-size:13px; font-weight:600; color:#48586b; }
+  .field input[type=text] { font-size:16px; padding:11px 12px; border:1px solid var(--line); border-radius:8px; width:210px; }
+  .field input[type=text]:focus, .field input[type=number]:focus { outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
+  .field .hint { font-size:12px; color:#7c8a9a; font-weight:400; }
+
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:9px; overflow:hidden; }
+  .seg label { font-size:13.5px; font-weight:600; padding:10px 14px; cursor:pointer; color:#48586b; background:#fff; }
+  .seg label + label { border-left:1px solid var(--line); }
+  .seg input { position:absolute; opacity:0; pointer-events:none; }
+  .seg input:checked + label { background:var(--accent); color:#fff; }
+
+  .btnbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:16px; }
+  button { font-size:14.5px; font-weight:600; padding:12px 20px; border-radius:9px; border:1px solid transparent; cursor:pointer; }
+  button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .btn-print { background:var(--accent); color:#fff; font-size:15px; }
+  .btn-print:hover { background:var(--accent-dk); }
+  .btn-ghost { background:#fff; color:var(--accent); border-color:var(--accent); }
+  .btn-ghost:hover { background:var(--accent-bg); }
+
+  /* ---- Print-settings callout ---- */
+  details.printhelp { margin-top:14px; border:1px dashed var(--line); border-radius:9px; padding:0 14px; background:#fbfcfe; }
+  details.printhelp summary { cursor:pointer; font-weight:600; color:var(--accent); font-size:13.5px; padding:12px 0; }
+  details.printhelp ol { font-size:13.5px; color:#475669; line-height:1.6; margin:0 0 12px; padding-left:20px; }
+  details.printhelp .warn { color:#b06a00; font-weight:600; }
+
+  /* ---- Events table ---- */
+  table.events { width:100%; border-collapse:collapse; font-size:14px; }
+  table.events th, table.events td { padding:8px 8px; border-bottom:1px solid var(--line-soft); text-align:left; }
+  table.events thead th { font-size:12px; text-transform:uppercase; letter-spacing:.03em; color:#7c8a9a; font-weight:700; position:sticky; top:0; background:#fff; }
+  table.events td.num { font-weight:700; white-space:nowrap; }
+  table.events tr.relay td.num { color:#0a6ebd; }
+  table.events tr.indiv td.num { color:#2a8a5a; }
+  table.events tr.blank td.num { color:#b06a00; }
+  table.events td.name { color:#33414f; }
+  table.events input[type=number] { width:72px; font-size:15px; padding:8px 8px; border:1px solid var(--line); border-radius:7px; text-align:center; }
+  table.events tr:hover td { background:#f7fafd; }
+  table.events tr.is-preview td { background:#eef5fb !important; }
+  td.totals { color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .na { color:#aeb9c6; }
+  .summary { font-size:14px; color:#33414f; margin-top:12px; }
+  .summary strong { color:var(--ink); }
+
+  /* ===================== Live preview pane ===================== */
+  .preview-pane { position:sticky; top:16px; align-self:start; max-height: calc(100vh - 32px); overflow:auto; }
+  .preview-card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .preview-card.pulse { animation: pulseGlow .75s ease-out; }
+  @keyframes pulseGlow {
+    0%   { box-shadow: 0 0 0 0 rgba(10,110,189,.30); }
+    100% { box-shadow: 0 0 0 10px rgba(10,110,189,0); }
+  }
+  .preview-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .preview-head h2 { font-size:13px; margin:0; text-transform:uppercase; letter-spacing:.05em; color:#48586b; }
+  .save-badge { font-size:12px; color:var(--good); background:var(--good-bg); border-radius:20px; padding:3px 11px; font-weight:600; opacity:0; transition:opacity .25s; }
+  .save-badge.show { opacity:1; }
+
+  .totals-box { display:flex; gap:10px; }
+  .stat { flex:1; background:var(--accent-bg); border-radius:9px; padding:12px; text-align:center; }
+  .stat .n { font-size:24px; font-weight:700; color:var(--accent-dk); line-height:1.1; font-variant-numeric:tabular-nums; }
+  .stat .l { font-size:11.5px; color:#5b7287; text-transform:uppercase; letter-spacing:.03em; margin-top:2px; }
+
+  .mini-cap { font-size:12.5px; color:var(--muted); margin:16px 0 6px; display:flex; justify-content:space-between; align-items:center; }
+  .mini-nav { display:inline-flex; align-items:center; gap:7px; }
+  #miniPageInfo { min-width:78px; text-align:center; font-variant-numeric:tabular-nums; }
+  .mini-navbtn {
+    border:1px solid var(--line); background:#fff; color:var(--accent);
+    width:26px; height:26px; padding:0; border-radius:6px; font-size:16px; line-height:1; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .mini-navbtn:hover:not(:disabled) { background:var(--accent-bg); border-color:var(--accent); }
+  .mini-navbtn:disabled { opacity:.35; cursor:default; }
+
+  /* Show each label's cut box in the on-screen preview only (never printed) */
+  #miniInner .label, #modalScroll .label { outline:1px dashed #b3c0d0; outline-offset:-1px; }
+  .mini-wrap {
+    display:block; width:100%; padding:0; overflow:hidden; position:relative; text-align:left;
+    border:1px solid var(--line); border-radius:8px; background:#f4f6f9; cursor:zoom-in; font:inherit;
+  }
+  .mini-wrap:hover { border-color:var(--accent); }
+  .mini-wrap:hover .zoom-hint { opacity:1; }
+  .mini-wrap:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .zoom-hint {
+    position:absolute; top:8px; right:8px; z-index:2; opacity:0; transition:opacity .15s;
+    background:rgba(10,110,189,.92); color:#fff; font-size:11.5px; font-weight:600;
+    padding:4px 9px; border-radius:20px; pointer-events:none;
+  }
+  .mini-inner { transform-origin: top left; }
+  .mini-empty { padding:24px 12px; text-align:center; color:#9aa7b5; font-size:13px; }
+
+  /* Green check that pops over the print preview on each auto-save */
+  .save-check {
+    position:absolute; top:50%; left:50%; z-index:3;
+    width:66px; height:66px; border-radius:50%;
+    background:rgba(42,138,90,.96); color:#fff; font-size:36px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; box-shadow:0 6px 20px rgba(0,0,0,.28);
+    transform:translate(-50%,-50%) scale(.5);
+  }
+  .save-check.show { animation: saveCheckPop 1.15s ease-out; }
+  @keyframes saveCheckPop {
+    0%   { opacity:0; transform:translate(-50%,-50%) scale(.5); }
+    18%  { opacity:1; transform:translate(-50%,-50%) scale(1.08); }
+    40%  { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    70%  { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    100% { opacity:0; transform:translate(-50%,-50%) scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .save-check.show { animation: saveCheckFade 1.15s ease-out; }
+    @keyframes saveCheckFade { 0%,70%{opacity:1; transform:translate(-50%,-50%) scale(1);} 100%{opacity:0; transform:translate(-50%,-50%) scale(1);} }
+  }
+
+  /* ---- Enlarge modal ---- */
+  .modal-backdrop {
+    position:fixed; inset:0; z-index:50; background:rgba(20,30,45,.55);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-backdrop[hidden] { display:none; }
+  .modal-box {
+    background:#eef2f6; border-radius:12px; width:min(900px, 96vw); max-height:94vh;
+    display:flex; flex-direction:column; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,.3);
+  }
+  .modal-head { display:flex; align-items:center; gap:12px; padding:14px 16px; background:#fff; border-bottom:1px solid var(--line); }
+  .modal-head strong { font-size:15px; }
+  .modal-pageinfo { color:var(--muted); font-size:13px; margin-right:auto; }
+  .modal-close { padding:8px 14px; }
+  .modal-banner {
+    display:flex; gap:9px; align-items:flex-start;
+    background:#fff8ea; color:#7a5a00; border-bottom:1px solid #f0e3c2;
+    padding:11px 16px; font-size:13px; line-height:1.45;
+  }
+  .modal-banner .mb-ico { flex:0 0 auto; }
+  .modal-banner strong { color:#5e4500; }
+  .modal-scroll { overflow:auto; padding:18px; }
+  .modal-scroll .scaled-wrap { box-shadow:0 1px 6px rgba(0,0,0,.18); }
+
+  .scaled-wrap { position:relative; overflow:hidden; background:#fff; }
+  .scaled-wrap > .scaled-inner { transform-origin: top left; }
+
+  /* Page row = margin gutter (event markers) + the scaled sheet */
+  .modal-page { display:flex; align-items:flex-start; justify-content:center; gap:0; margin-bottom:18px; }
+  .modal-page:last-child { margin-bottom:0; }
+  .page-gutter { position:relative; width:158px; flex:0 0 158px; }
+  .ev-marker {
+    position:absolute; right:10px; width:148px; text-align:right;
+    padding:2px 9px 3px 0; border-right:3px solid var(--accent); transform:translateY(-3px);
+  }
+  .ev-marker .evm-num { display:block; font-size:12px; font-weight:700; color:var(--accent-dk); line-height:1.2; }
+  .ev-marker .evm-name { display:block; font-size:10.5px; color:#5b6a7d; line-height:1.25; }
+  .ev-marker .evm-count { display:block; font-size:10.5px; font-weight:600; color:var(--good); }
+  .ev-marker em { font-style:normal; font-weight:600; }
+  .ev-marker.cont { border-right-color:#b9c4d2; }
+  .ev-marker.cont .evm-num { color:#7c8a9a; }
+
+  /* Alternating per-event tint — preview only, never printed */
+  #modalScroll .label.ev0, #miniInner .label.ev0 { background:#eff5fd; }
+  #modalScroll .label.ev1, #miniInner .label.ev1 { background:#fff4ea; }
+
+  /* ===================== The printable label sheets ===================== */
+  /* Avery 5160: US Letter, 3 cols x 10 rows = 30 labels/page.
+     Label 2.625in x 1in; top/bottom margin 0.5in; left/right margin 0.1875in;
+     column gap 0.125in; no row gap. */
+  .sheet {
+    background:#fff;
+    width: 8.5in; height: 11in;
+    padding: 0.5in 0.1875in;
+    display: grid;
+    grid-template-columns: repeat(3, 2.625in);
+    grid-auto-rows: 1in;
+    column-gap: 0.125in; row-gap: 0;
+    overflow: hidden;
+  }
+  .label {
+    width: 2.625in; height: 1in;
+    padding: 0.05in 0.13in;
+    overflow: hidden;
+    text-align: left;
+    display: flex; flex-direction: column; justify-content: space-between;
+    font-family: "Inter", Arial, Helvetica, sans-serif;
+    font-size: 8pt; line-height: 1.12; letter-spacing: -0.1px;
+    color: #000;
+  }
+  .label .title { font-weight: 700; }
+
+  #printArea .sheet { margin: 0 auto 18px; box-shadow: 0 1px 6px rgba(0,0,0,.12); }
+
+  @media screen { #printArea { display:none; } }
+
+  /* ===================== Print rules ===================== */
+  @page { size: letter portrait; margin: 0; }
+  @media print {
+    body { background:#fff; }
+    .app { display:none !important; }
+    #printArea { display:block; }
+    #printArea .sheet { box-shadow:none; margin:0; page-break-after: always; break-after: page; }
+    #printArea .sheet:last-child { page-break-after: auto; break-after: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="app-head">
+    <h1>🏊 Swim Meet Ribbon Sticker Maker</h1>
+    <p class="sub">Type your meet info, adjust counts if needed, then <strong>Print</strong> onto Avery&nbsp;5160 label sheets (30 per page).</p>
+  </header>
+
+  <div class="workspace">
+    <!-- LEFT: editable controls -->
+    <div class="editor">
+
+      <!-- Collapsible: How to use -->
+      <details class="howto" id="howto">
+        <summary><span class="chev">▶</span> How to use this tool</summary>
+        <div class="howto-body">
+          <p class="lead">This tool builds a full set of ribbon labels for a swim meet automatically. Here's how the labels get created:</p>
+          <ul>
+            <li><strong>All 31 events are built in</strong> (Event&nbsp;#0–#30) with their names already filled in — you never retype them.</li>
+            <li><strong>Type the meet date and meet name once</strong> at the top. Those two lines (“Date:” and “Meet:”) print on <em>every</em> label automatically.</li>
+            <li><strong>Each event gets a label for every placement</strong> — <span class="pill">1st</span> <span class="pill">2nd</span> <span class="pill">3rd</span> <span class="pill">4th</span> <span class="pill">5th</span> and then <span class="pill">Participant</span> (covers 6th place and beyond).</li>
+            <li><strong>“Per place” = how many labels for each of 1st–5th.</strong> Relays default to <strong>4</strong> (one per swimmer); individual events default to <strong>1</strong>. “Participant” is a separate count for the leftover swimmers.</li>
+            <li><strong>Turnout changes each meet</strong> — just edit the numbers in the table for any event. <strong>Set a count to <span class="pill">0</span></strong> to skip that placement entirely.</li>
+            <li><strong>Event&nbsp;#0 is special</strong> — a stack of blank “8 &amp; Under Medley Relay” labels with no placement line, used as fill-in extras.</li>
+            <li><strong>Watch the Live Preview</strong> on the right — it updates the moment you change anything, so you always see what will print. Click it to enlarge.</li>
+            <li><strong>Everything saves automatically.</strong> Next meet, just change the date and tweak a few counts. (Use <strong>Reset to defaults</strong> to start over.)</li>
+          </ul>
+        </div>
+      </details>
+
+      <div class="card">
+        <h2>Step 1 · Meet info</h2>
+        <div class="row">
+          <div class="field">
+            <label for="meetDate">Meet date</label>
+            <input type="text" id="meetDate" placeholder="6/26/26" autocomplete="off">
+            <span class="hint">Prints as “Date: …” on every label</span>
+          </div>
+          <div class="field">
+            <label for="meetName">Meet name</label>
+            <input type="text" id="meetName" placeholder="Park vs. MSC" autocomplete="off">
+            <span class="hint">Prints as “Meet: …” on every label</span>
+          </div>
+          <div class="field">
+            <label>Sheet layout</label>
+            <div class="seg">
+              <input type="radio" name="layout" id="layoutEvent" value="event">
+              <label for="layoutEvent">New page per event</label>
+              <input type="radio" name="layout" id="layoutPack" value="pack">
+              <label for="layoutPack">Pack to save sheets</label>
+            </div>
+            <span class="hint">“New page per event” keeps each event on its own sheet</span>
+          </div>
+        </div>
+
+        <div class="btnbar">
+          <button class="btn-print" onclick="window.print()">🖨️ Print labels</button>
+          <button class="btn-ghost" id="resetBtn">↺ Reset to defaults</button>
+        </div>
+
+        <details class="printhelp">
+          <summary>How to print correctly (read once)</summary>
+          <ol>
+            <li>Load Avery <strong>5160</strong> label sheets in your printer.</li>
+            <li>Click <strong>Print labels</strong>. Choose paper size <strong>US&nbsp;Letter</strong>.</li>
+            <li>Set scale to <span class="warn">100% / “Actual size”</span> — <em>not</em> “Fit to page,” or the labels won't line up.</li>
+            <li>Set margins to <strong>None / Default</strong>; turn off headers &amp; footers.</li>
+            <li>First time: print one page on plain paper and hold it over a real label sheet to check alignment.</li>
+          </ol>
+        </details>
+      </div>
+
+      <div class="card">
+        <h2>Step 2 · Events &amp; label counts</h2>
+        <table class="events">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>Name</th>
+              <th>Per place<br>(1st–5th)</th>
+              <th>Participant</th>
+              <th>Labels</th>
+            </tr>
+          </thead>
+          <tbody id="eventRows"></tbody>
+        </table>
+        <p class="summary" id="summary"></p>
+      </div>
+    </div>
+
+    <!-- RIGHT: live preview -->
+    <aside class="preview-pane">
+      <div class="preview-card" id="previewCard">
+        <div class="preview-head">
+          <h2>👁 Live preview</h2>
+          <span class="save-badge" id="saveBadge" role="status" aria-live="polite">✓ Saved &amp; updated</span>
+        </div>
+
+        <div class="totals-box">
+          <div class="stat"><div class="n" id="statLabels">0</div><div class="l">Labels</div></div>
+          <div class="stat"><div class="n" id="statSheets">0</div><div class="l">Sheets</div></div>
+        </div>
+
+        <div class="mini-cap">
+          <span>Print preview</span>
+          <span class="mini-nav">
+            <button type="button" class="mini-navbtn" id="miniPrev" aria-label="Previous page">‹</button>
+            <span id="miniPageInfo"></span>
+            <button type="button" class="mini-navbtn" id="miniNext" aria-label="Next page">›</button>
+          </span>
+        </div>
+        <button type="button" class="mini-wrap" id="miniWrap" title="Click to enlarge">
+          <span class="zoom-hint">🔍 Click to enlarge</span>
+          <span class="save-check" id="saveCheck" aria-hidden="true">✓</span>
+          <div class="mini-inner" id="miniInner"></div>
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Enlarge modal (screen only) -->
+  <div class="modal-backdrop" id="modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-label="Print preview">
+      <div class="modal-head">
+        <strong>Print preview</strong>
+        <span class="modal-pageinfo" id="modalPageInfo"></span>
+        <button type="button" class="btn-ghost modal-close" id="modalClose">✕ Close</button>
+      </div>
+      <div class="modal-banner">
+        <span class="mb-ico">ℹ️</span>
+        <span>The <strong>dashed boxes</strong>, <strong>alternating colors</strong> (one shade per event), and the <strong>event markers</strong> in the left margin (where each event starts, its name, and label count) are on-screen guides to help you check everything fits. <strong>None of them appear on the final printout.</strong></span>
+      </div>
+      <div class="modal-scroll" id="modalScroll"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Full-size sheets used only for printing -->
+<div id="printArea"></div>
+
+<script>
+"use strict";
+
+/* ---------------- Event definitions (fixed list, #0–#30) ---------------- */
+const EVENTS = [
+  { num: 0,  name: "8 & Under Medley Relay",         type: "blank" },
+  { num: 1,  name: "Girls 13-18 200 Medley Relay",   type: "relay" },
+  { num: 2,  name: "Boys 13-18 200 Medley Relay",    type: "relay" },
+  { num: 3,  name: "Girls 12&U 100 Medley Relay",    type: "relay" },
+  { num: 4,  name: "Boys 12&U 100 Medley Relay",     type: "relay" },
+  { num: 5,  name: "Girls 10&U 100 Free Relay",      type: "relay" },
+  { num: 6,  name: "Boys 10&U 100 Free Relay",       type: "relay" },
+  { num: 7,  name: "Girls 14&U 200 Free Relay",      type: "relay" },
+  { num: 8,  name: "Boys 14&U 200 Free Relay",       type: "relay" },
+  { num: 9,  name: "Girls 8&U 25 Free",              type: "indiv" },
+  { num: 10, name: "Boys 8&U 25 Free",               type: "indiv" },
+  { num: 11, name: "Girls 9-10 25 Free",             type: "indiv" },
+  { num: 12, name: "Boys 9-10 25 Free",              type: "indiv" },
+  { num: 13, name: "Girls 11-12 100 Free",           type: "indiv" },
+  { num: 14, name: "Boys 11-12 100 Free",            type: "indiv" },
+  { num: 15, name: "Girls 13-18 50 Free",            type: "indiv" },
+  { num: 16, name: "Boys 13-18 50 Free",             type: "indiv" },
+  { num: 17, name: "Girls 13-14 50 Free",            type: "indiv" },
+  { num: 18, name: "Boys 13-14 50 Free",             type: "indiv" },
+  { num: 19, name: "Girls 8&U 100 Free Relay",       type: "relay" },
+  { num: 20, name: "Boys 8&U 100 Free Relay",        type: "relay" },
+  { num: 21, name: "Girls Mixed Butterfly Relay",    type: "relay" },
+  { num: 22, name: "Boys Mixed Butterfly Relay",     type: "relay" },
+  { num: 23, name: "Girls Mixed Breaststroke Relay", type: "relay" },
+  { num: 24, name: "Boys Mixed Breaststroke Relay",  type: "relay" },
+  { num: 25, name: "Girls Mixed Backstroke Relay",   type: "relay" },
+  { num: 26, name: "Boys Mixed Backstroke Relay",    type: "relay" },
+  { num: 27, name: "Girls 12&U 100 Free Relay",      type: "relay" },
+  { num: 28, name: "Boys 12&U 100 Free Relay",       type: "relay" },
+  { num: 29, name: "Girls 13-18 200 Free Relay",     type: "relay" },
+  { num: 30, name: "Boys 13-18 200 Free Relay",      type: "relay" },
+];
+
+const PLACES = ["1st Place", "2nd Place", "3rd Place", "4th Place", "5th Place"];
+const PER_PAGE = 30;
+const STORAGE_KEY = "swimStickerMaker.v1";
+
+function defaultsFor(ev) {
+  if (ev.type === "blank") return { blanks: 60 };
+  if (ev.type === "relay") return { perPlace: 4, participants: 8 };
+  return { perPlace: 1, participants: 8 }; // individual
+}
+
+/* ---------------- State (with localStorage persistence) ---------------- */
+let state = loadState();
+let lastPages = [];        // most recent pagination, reused by the mini preview + modal
+let miniPage = 0;          // which page the mini preview is currently showing
+
+function freshState() {
+  const counts = {};
+  EVENTS.forEach(ev => { counts[ev.num] = defaultsFor(ev); });
+  return { meetDate: "6/26/26", meetName: "Park vs. MSC", layout: "event", helpOpen: true, counts };
+}
+
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!saved || !saved.counts) return freshState();
+    const base = freshState();
+    base.meetDate = saved.meetDate ?? base.meetDate;
+    base.meetName = saved.meetName ?? base.meetName;
+    base.layout   = saved.layout   ?? base.layout;
+    base.helpOpen = saved.helpOpen ?? base.helpOpen;
+    EVENTS.forEach(ev => {
+      if (saved.counts[ev.num]) base.counts[ev.num] = Object.assign(base.counts[ev.num], saved.counts[ev.num]);
+    });
+    return base;
+  } catch (e) { return freshState(); }
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+  flashSaved();
+}
+
+let flashTimer = null;
+function flashSaved() {
+  const b = document.getElementById("saveBadge");
+  b.classList.add("show");
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => b.classList.remove("show"), 1500);
+
+  // Pop a green check over the print preview
+  const chk = document.getElementById("saveCheck");
+  if (chk) { chk.classList.remove("show"); void chk.offsetWidth; chk.classList.add("show"); }
+}
+
+/* Subtle pulse on the preview card so changes are noticed */
+function pulsePreview() {
+  const c = document.getElementById("previewCard");
+  c.classList.remove("pulse");
+  void c.offsetWidth;            // restart the animation
+  c.classList.add("pulse");
+}
+
+/* ---------------- Helpers ---------------- */
+function clampInt(v) { v = parseInt(v, 10); return (isNaN(v) || v < 0) ? 0 : v; }
+
+function eventLabelCount(ev) {
+  const c = state.counts[ev.num];
+  if (ev.type === "blank") return clampInt(c.blanks);
+  return PLACES.length * clampInt(c.perPlace) + clampInt(c.participants);
+}
+
+function buildLabels(ev) {
+  const c = state.counts[ev.num];
+  const titleText = "Event #" + ev.num + " " + ev.name;
+  const en = ev.num;
+  const labels = [];
+  if (ev.type === "blank") {
+    for (let i = 0; i < clampInt(c.blanks); i++) labels.push({ title: titleText, place: null, evNum: en });
+  } else {
+    const per = clampInt(c.perPlace);
+    PLACES.forEach(place => { for (let i = 0; i < per; i++) labels.push({ title: titleText, place, evNum: en }); });
+    const part = clampInt(c.participants);
+    for (let i = 0; i < part; i++) labels.push({ title: titleText, place: "Participant", evNum: en });
+  }
+  return labels;
+}
+
+function totalLabels() { return EVENTS.reduce((s, ev) => s + eventLabelCount(ev), 0); }
+function totalSheets() {
+  if (state.layout === "pack") return Math.ceil(totalLabels() / PER_PAGE) || 0;
+  return EVENTS.reduce((s, ev) => s + (Math.ceil(eventLabelCount(ev) / PER_PAGE) || 0), 0);
+}
+
+/* ---------------- Render: control table ---------------- */
+function renderTable() {
+  const tbody = document.getElementById("eventRows");
+  tbody.innerHTML = "";
+  EVENTS.forEach(ev => {
+    const c = state.counts[ev.num];
+    const tr = document.createElement("tr");
+    tr.className = ev.type;
+    tr.dataset.num = ev.num;
+    if (ev.type === "blank") {
+      tr.innerHTML =
+        '<td class="num">#' + ev.num + '</td>' +
+        '<td class="name">' + escapeHtml(ev.name) + ' <span class="na">(blank — no place)</span></td>' +
+        '<td><input type="number" min="0" inputmode="numeric" data-num="' + ev.num + '" data-field="blanks" value="' + clampInt(c.blanks) + '"> <span class="na">blanks</span></td>' +
+        '<td class="na">—</td>' +
+        '<td class="totals" data-total="' + ev.num + '"></td>';
+    } else {
+      tr.innerHTML =
+        '<td class="num">#' + ev.num + '</td>' +
+        '<td class="name">' + escapeHtml(ev.name) + '</td>' +
+        '<td><input type="number" min="0" inputmode="numeric" data-num="' + ev.num + '" data-field="perPlace" value="' + clampInt(c.perPlace) + '"></td>' +
+        '<td><input type="number" min="0" inputmode="numeric" data-num="' + ev.num + '" data-field="participants" value="' + clampInt(c.participants) + '"></td>' +
+        '<td class="totals" data-total="' + ev.num + '"></td>';
+    }
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('input[type=number]').forEach(inp => {
+    const num = inp.getAttribute('data-num');
+    const field = inp.getAttribute('data-field');
+    inp.addEventListener('input', () => {
+      state.counts[num][field] = clampInt(inp.value);
+      refreshAll();
+      saveState();
+    });
+  });
+  updateTotals();
+}
+
+function updateTotals() {
+  EVENTS.forEach(ev => {
+    const n = eventLabelCount(ev);
+    const cell = document.querySelector('[data-total="' + ev.num + '"]');
+    if (cell) cell.textContent = n + (n === 1 ? " label" : " labels");
+  });
+  const labels = totalLabels(), sheets = totalSheets();
+  document.getElementById("summary").innerHTML =
+    "Total: <strong>" + labels + "</strong> labels across <strong>" + sheets +
+    "</strong> sheet" + (sheets === 1 ? "" : "s") + " (30 per sheet).";
+  document.getElementById("statLabels").textContent = labels;
+  document.getElementById("statSheets").textContent = sheets;
+}
+
+/* ---------------- Pagination + sheet rendering ---------------- */
+function labelNode(lbl) {
+  const div = document.createElement("div");
+  if (!lbl) { div.className = "label empty"; return div; }
+  div.className = "label ev" + (lbl.evNum % 2);   // ev0 / ev1 → alternating tint in preview only
+  let html = '<div class="title">' + escapeHtml(lbl.title) + '</div>';
+  if (lbl.place) html += '<div>' + escapeHtml(lbl.place) + '</div>';
+  html += '<div>Swimmer:</div><div>Time:</div>';
+  html += '<div>Date: ' + escapeHtml(state.meetDate) + '</div>';
+  html += '<div>Meet: ' + escapeHtml(state.meetName) + '</div>';
+  div.innerHTML = html;
+  return div;
+}
+
+function paginate() {
+  const pages = [];
+  if (state.layout === "pack") {
+    let all = [];
+    EVENTS.forEach(ev => { all = all.concat(buildLabels(ev)); });
+    for (let i = 0; i < all.length; i += PER_PAGE) pages.push(all.slice(i, i + PER_PAGE));
+  } else {
+    EVENTS.forEach(ev => {
+      const labels = buildLabels(ev);
+      if (labels.length === 0) return;
+      for (let i = 0; i < labels.length; i += PER_PAGE) {
+        const chunk = labels.slice(i, i + PER_PAGE);
+        while (chunk.length < PER_PAGE) chunk.push(null);
+        pages.push(chunk);
+      }
+    });
+  }
+  return pages;
+}
+
+function sheetNode(page) {
+  const sheet = document.createElement("div");
+  sheet.className = "sheet";
+  page.forEach(lbl => sheet.appendChild(labelNode(lbl)));
+  return sheet;
+}
+
+function renderSheets() {
+  const pages = paginate();
+  lastPages = pages;
+
+  // Full-size sheets for printing
+  const printArea = document.getElementById("printArea");
+  printArea.innerHTML = "";
+  pages.forEach(page => printArea.appendChild(sheetNode(page)));
+
+  renderMini();
+  if (!document.getElementById("modal").hidden) renderModal();
+}
+
+/* Scaled thumbnail of the currently-selected page for the live preview */
+function renderMini() {
+  const inner = document.getElementById("miniInner");
+  const info = document.getElementById("miniPageInfo");
+  const prev = document.getElementById("miniPrev");
+  const next = document.getElementById("miniNext");
+  const n = lastPages.length;
+  inner.innerHTML = "";
+  if (n === 0) {
+    inner.innerHTML = '<div class="mini-empty">No labels yet — set some counts on the left.</div>';
+    info.textContent = "";
+    inner.style.transform = "none";
+    document.getElementById("miniWrap").style.height = "auto";
+    prev.disabled = true; next.disabled = true;
+    return;
+  }
+  if (miniPage > n - 1) miniPage = n - 1;
+  if (miniPage < 0) miniPage = 0;
+  inner.appendChild(sheetNode(lastPages[miniPage]));
+  info.textContent = "Page " + (miniPage + 1) + " of " + n;
+  prev.disabled = (miniPage === 0);
+  next.disabled = (miniPage === n - 1);
+  fitMini();
+}
+
+/* Scale the full-size page-1 sheet down to fit the preview pane width */
+function fitMini() {
+  const wrap = document.getElementById("miniWrap");
+  const inner = document.getElementById("miniInner");
+  if (!inner.firstChild) return;
+  const sheetW = 8.5 * 96, sheetH = 11 * 96;   // CSS px at 96dpi
+  const scale = wrap.clientWidth / sheetW;
+  inner.style.transform = "scale(" + scale + ")";
+  wrap.style.height = (sheetH * scale) + "px";
+}
+
+/* ---------------- Enlarge modal ---------------- */
+function scaledPage(page, scale) {
+  const sheetW = 8.5 * 96, sheetH = 11 * 96;
+  const wrap = document.createElement("div");
+  wrap.className = "scaled-wrap";
+  wrap.style.width = (sheetW * scale) + "px";
+  wrap.style.height = (sheetH * scale) + "px";
+  const inner = document.createElement("div");
+  inner.className = "scaled-inner";
+  inner.style.transform = "scale(" + scale + ")";
+  inner.appendChild(sheetNode(page));
+  wrap.appendChild(inner);
+  return wrap;
+}
+
+const GUTTER_W = 158;   // left margin width for event markers (px)
+
+/* Find where each event begins on a page (skipping spacer cells). */
+function pageMarkers(page, seen) {
+  const markers = [];
+  let cur = null;
+  page.forEach((lbl, i) => {
+    if (!lbl) return;
+    if (lbl.evNum !== cur) {
+      cur = lbl.evNum;
+      markers.push({ cell: i, evNum: lbl.evNum, cont: seen.has(lbl.evNum) });
+      seen.add(lbl.evNum);
+    }
+  });
+  return markers;
+}
+
+function modalPageRow(page, scale, markers) {
+  const row = document.createElement("div");
+  row.className = "modal-page";
+
+  const gutter = document.createElement("div");
+  gutter.className = "page-gutter";
+  gutter.style.height = (11 * 96 * scale) + "px";
+
+  markers.forEach(m => {
+    const ev = EVENTS.find(e => e.num === m.evNum);
+    const rowIdx = Math.floor(m.cell / 3);
+    const topPx = (0.5 * 96 + rowIdx * 96) * scale;     // top of that label's row, scaled
+    const tag = document.createElement("div");
+    tag.className = "ev-marker" + (m.cont ? " cont" : "");
+    tag.style.top = topPx + "px";
+    const n = eventLabelCount(ev);
+    tag.innerHTML =
+      '<span class="evm-num">Event #' + ev.num + (m.cont ? ' <em>(cont.)</em>' : '') + '</span>' +
+      '<span class="evm-name">' + escapeHtml(ev.name) + '</span>' +
+      (m.cont ? '' : '<span class="evm-count">' + n + (n === 1 ? ' label' : ' labels') + '</span>');
+    gutter.appendChild(tag);
+  });
+
+  row.appendChild(gutter);
+  row.appendChild(scaledPage(page, scale));
+  return row;
+}
+
+function renderModal() {
+  const scroll = document.getElementById("modalScroll");
+  const info = document.getElementById("modalPageInfo");
+  scroll.innerHTML = "";
+  if (lastPages.length === 0) {
+    scroll.innerHTML = '<div class="mini-empty">No labels yet — set some counts on the left.</div>';
+    info.textContent = "";
+    return;
+  }
+  const sheetW = 8.5 * 96;
+  const avail = scroll.clientWidth - 36 - GUTTER_W;      // minus padding + margin gutter
+  const scale = Math.min(1, Math.max(0.2, avail / sheetW));
+  const seen = new Set();
+  lastPages.forEach(page => scroll.appendChild(modalPageRow(page, scale, pageMarkers(page, seen))));
+  info.textContent = lastPages.length === 1 ? "1 page" : lastPages.length + " pages";
+}
+
+function openModal() {
+  document.getElementById("modal").hidden = false;
+  renderModal();
+}
+function closeModal() {
+  document.getElementById("modal").hidden = true;
+}
+
+/* ---------------- Glue ---------------- */
+function refreshAll() { updateTotals(); renderSheets(); pulsePreview(); }
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, ch => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
+  ));
+}
+
+function syncFields() {
+  document.getElementById("meetDate").value = state.meetDate;
+  document.getElementById("meetName").value = state.meetName;
+  document.getElementById("layoutEvent").checked = state.layout === "event";
+  document.getElementById("layoutPack").checked = state.layout === "pack";
+  document.getElementById("howto").open = !!state.helpOpen;
+}
+
+function init() {
+  syncFields();
+  renderTable();
+  renderSheets();
+
+  document.getElementById("meetDate").addEventListener("input", e => {
+    state.meetDate = e.target.value; refreshAll(); saveState();
+  });
+  document.getElementById("meetName").addEventListener("input", e => {
+    state.meetName = e.target.value; refreshAll(); saveState();
+  });
+  document.querySelectorAll('input[name="layout"]').forEach(r => {
+    r.addEventListener("change", e => {
+      if (e.target.checked) { state.layout = e.target.value; refreshAll(); saveState(); }
+    });
+  });
+  document.getElementById("howto").addEventListener("toggle", e => {
+    state.helpOpen = e.target.open; saveState();
+  });
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    if (confirm("Reset the meet info and all event counts back to the defaults?")) {
+      state = freshState();
+      syncFields();
+      renderTable();
+      refreshAll();
+      saveState();
+    }
+  });
+
+  // Mini-preview page navigation
+  document.getElementById("miniPrev").addEventListener("click", () => {
+    if (miniPage > 0) { miniPage--; renderMini(); }
+  });
+  document.getElementById("miniNext").addEventListener("click", () => {
+    if (miniPage < lastPages.length - 1) { miniPage++; renderMini(); }
+  });
+
+  // Enlarge modal
+  document.getElementById("miniWrap").addEventListener("click", openModal);
+  document.getElementById("modalClose").addEventListener("click", closeModal);
+  document.getElementById("modal").addEventListener("click", e => {
+    if (e.target.id === "modal") closeModal();   // click backdrop to close
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && !document.getElementById("modal").hidden) closeModal();
+  });
+
+  window.addEventListener("resize", () => {
+    fitMini();
+    if (!document.getElementById("modal").hidden) renderModal();
+  });
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
