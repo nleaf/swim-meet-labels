@@ -437,9 +437,9 @@ const PER_PAGE = 30;
 const STORAGE_KEY = "swimStickerMaker.v1";
 
 function defaultsFor(ev) {
-  if (ev.type === "blank") return { blanks: 60 };
-  if (ev.type === "relay") return { perPlace: 4, participants: 8 };
-  return { perPlace: 1, participants: 8 }; // individual
+  if (ev.type === "blank") return { blanks: 24 };
+  if (ev.type === "relay") return { perPlace: 4, participants: 4 };
+  return { perPlace: 1, participants: 1 }; // individual
 }
 
 /* ---------------- State (with localStorage persistence) ---------------- */
